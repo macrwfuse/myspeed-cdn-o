@@ -1,5 +1,5 @@
-# MySpeed-CN Docker Compose
-# Usage: docker compose up -d
+# MySpeed-CN + CDN 节点自动更新 Docker Compose
+# 用法: docker compose up -d --build   （需先应用本目录补丁到仓库，见 README-CDN-AUTO.md）
 
 version: '3.8'
 
@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # Or use pre-built image:
+    # Or use pre-built image (需镜像本身已内置 docker/cdn-scheduler.mjs 与 scripts):
     # image: macrwfuse/myspeed-cn:latest
     container_name: myspeed-cn
     ports:
@@ -17,23 +17,36 @@ services:
       # - "5217:5217"
     volumes:
       - myspeed-data:/myspeed/data
+      # ── [CDN-AUTO] 关键：让“自动修复”写入的 servers.js、备用池/报告持久化到宿主机仓库目录。
+      #    即使 docker compose down/up（重建容器）也不会丢失已修复的节点与候选池；
+      #    宿主机上可直接 git diff 查看本次自动修复改动。
+      - ./server/controller:/myspeed/server/controller
+      - ./scripts:/myspeed/scripts
+      - ./logs:/myspeed/logs
     environment:
       - TZ=Asia/Shanghai
+      # ── [CDN-AUTO] 自动更新开关与节奏（全部可用环境变量覆盖）──
+      - CDN_AUTO_ENABLED=true            # false = 只跑服务，不自动更新
+      - "CDN_UPDATE_CRON=17 3 * * *"     # 定时节奏，默认每天 03:17
+      - CDN_UPDATE_ON_STARTUP=true       # 容器启动/重启时先执行一轮（重启自动触发）
+      - CDN_UPDATE_START_DELAY_SEC=60    # 启动后延迟执行首轮（秒），让服务先就绪
+      - CDN_EXTRA_DISCOVERY=true         # 每轮额外单独运行 cdn-discovery.mjs（写入 logs/）
+      - CDN_RESTART_ON_CHANGE=true       # 有链接被替换时自动重启 server 进程加载新节点
+      # Uncomment to auto-run speedtest on startup:
+      # - RUN_TEST_ON_STARTUP=true
       # Uncomment for MySQL:
       # - DB_TYPE=mysql
       # - DB_HOST=mysql
       # - DB_NAME=myspeed
       # - DB_USER=myspeed
       # - DB_PASS=your_password
-      # Uncomment to auto-run speedtest on startup:
-      # - RUN_TEST_ON_STARTUP=true
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5216/api/info"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
 
   # Uncomment for MySQL support:
   # mysql:

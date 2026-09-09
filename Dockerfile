@@ -1,4 +1,17 @@
+# syntax=docker/dockerfile:1
+#
+# MySpeed-CN + CDN 节点自动更新 (myspeed-cdn-auto)
+# -----------------------------------------------------------
+# 相对上游修改点（用 `[CDN-AUTO]` 标注）：
+#   1. 最终镜像补 COPY ./scripts（cdn-discovery.mjs / update-cdn-nodes.mjs 上游漏拷）
+#   2. 最终镜像新增 ./docker/cdn-scheduler.mjs（监督调度器）
+#   3. 默认 CMD 改为监督调度器：容器启动/重启自动执行一轮 CDN 发现+更新，
+#      定时(默认每天 03:17)执行，替换失效链接后自动重启 server 进程加载新节点。
+#      CDN_SERVER_ONLY=true 可还原为"仅运行 server"的原版行为。
 
+# ─────────────────────────────────────────────
+# 阶段 1：构建前端 (client)
+# ─────────────────────────────────────────────
 FROM docker.1ms.run/node:20-slim AS client-build
 
 WORKDIR /client
@@ -20,8 +33,10 @@ RUN npm install
 COPY ./client ./
 RUN npm run build
 
-FROM  docker.1ms.run/oven/bun:1 AS server-build
-
+# ─────────────────────────────────────────────
+# 阶段 2：安装服务端依赖并生成迁移/集成/内嵌前端
+# ─────────────────────────────────────────────
+FROM docker.1ms.run/oven/bun:1 AS server-build
 
 WORKDIR /myspeed
 
@@ -50,8 +65,10 @@ RUN bun run generate-integrations
 COPY --from=client-build /client/build /myspeed/build
 RUN bun run generate-client-embed
 
-# Download speed test CLI binaries for Linux x86_64
-FROM  docker.1ms.run/debian:bookworm-slim AS binaries
+# ─────────────────────────────────────────────
+# 阶段 3：下载测速 CLI 二进制 (linux x86_64)
+# ─────────────────────────────────────────────
+FROM docker.1ms.run/debian:bookworm-slim AS binaries
 
 RUN set -eux; \
     if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
@@ -90,7 +107,10 @@ RUN curl -fsSL "https://gh.xxooo.cf/https://github.com/code-inflation/cfspeedtes
     chmod +x /bins/cfspeedtest && \
     rm /tmp/cf.tar.gz
 
-FROM  docker.1ms.run/oven/bun:1
+# ─────────────────────────────────────────────
+# 阶段 4：最终镜像
+# ─────────────────────────────────────────────
+FROM docker.1ms.run/oven/bun:1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata ca-certificates openssl curl \
@@ -111,11 +131,18 @@ COPY --from=binaries /bins/speedtest /myspeed/bin/speedtest
 COPY --from=binaries /bins/librespeed-cli /myspeed/bin/librespeed-cli
 COPY --from=binaries /bins/cfspeedtest /myspeed/bin/cfspeedtest
 
+# [CDN-AUTO] 把 CDN 发现/更新脚本与监督调度器放入最终镜像（上游只拷进 server-build，未进最终镜像）
+COPY ./scripts /myspeed/scripts
+COPY ./docker /myspeed/docker
+RUN mkdir -p /myspeed/logs
+
 VOLUME ["/myspeed/data"]
 
 EXPOSE 5216
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:5216/api/info/version || exit 1
 
-CMD ["bun", "run", "server/index.js"]
+# [CDN-AUTO] 默认入口：监督调度器（启动即拉起 server，并按 cron 执行 CDN 发现+更新，
+#           替换后自动重启 server）。设 CDN_SERVER_ONLY=true 可还原：bun run server/index.js
+CMD ["bun", "run", "docker/cdn-scheduler.mjs"]
