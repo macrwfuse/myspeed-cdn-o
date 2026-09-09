@@ -376,7 +376,7 @@ export const CDN_SERVERS = {
         ],
         uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
-        streams: 6,
+        streams: 15,
         downloadTime: 10,
         uploadTime: 10
     },
@@ -390,7 +390,7 @@ export const CDN_SERVERS = {
         ],
         uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
-        streams: 6,
+        streams: 15,
         downloadTime: 10,
         uploadTime: 10
     },
@@ -426,7 +426,7 @@ export const CDN_SERVERS = {
         ],
         uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
-        streams: 6,
+        streams: 15,
         downloadTime: 10,
         uploadTime: 10
     },
@@ -448,7 +448,7 @@ export const CDN_SERVERS = {
         ],
         uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
-        streams: 6,
+        streams: 15,
         downloadTime: 10,
         uploadTime: 10
     },
@@ -462,7 +462,7 @@ export const CDN_SERVERS = {
         ],
         uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
-        streams: 6,
+        streams: 20,
         downloadTime: 10,
         uploadTime: 10
     }
