@@ -33,8 +33,14 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           name: Release ${{ steps.get_version.outputs.version }}
-          draft: true
+          body: |
+            MySpeed-CN v${{ steps.get_version.outputs.version }} — 自动构建发布。
+            - 平台独立可执行文件（内含 Ookla / LibreSpeed / Cloudflare 测速 CLI）：Windows x64 / Linux x64 / Linux arm64 / macOS x64 / macOS arm64
+            - 源码包：MySpeed-CN.zip
+            构建产物由 build-binaries.yml 自动上传，完整源码见仓库 main 分支。
+          draft: false
           prerelease: false
+          generate_release_notes: false
 
   build-binaries:
     name: "Build Binaries"

@@ -201,7 +201,7 @@ jobs:
               repo: context.repo.repo,
               release_id: ${{ inputs.release_id }},
               name: '${{ matrix.artifact_name }}',
-              data: fs.readFileSync('${{ matrix.artifact_name }}')
+              data: fs.readFileSync('MySpeed-CN')
             });
 
       - name: Upload archive to Release
@@ -272,8 +272,17 @@ jobs:
         run: |
           mkdir -p bin
 
-          # Ookla Speedtest CLI v1.2.0 (macOS x86_64, works on both x64 and arm64 via Rosetta)
-          curl -fsSL "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-macosx-x86_64.tgz" -o /tmp/ookla.tgz
+          # Ookla Speedtest CLI (macOS)：官方 1.2.0 macos 资产已下线(403)，先试 universal，再回退 1.1.1 x86_64 (arm64 经 Rosetta 运行)
+          for ookla_url in \
+            "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-macos-universal.tgz" \
+            "https://install.speedtest.net/app/cli/ookla-speedtest-1.1.1-macosx-x86_64.tgz"; do
+            if curl -fsSL --retry 3 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" "$ookla_url" -o /tmp/ookla.tgz; then
+              echo "ookla download OK: $ookla_url"
+              break
+            fi
+            echo "ookla download failed: $ookla_url"
+          done
+          test -s /tmp/ookla.tgz || { echo "FATAL: Ookla macOS download failed"; exit 1; }
           tar -xzf /tmp/ookla.tgz -C bin speedtest
           chmod +x bin/speedtest
           rm /tmp/ookla.tgz
@@ -307,7 +316,7 @@ jobs:
               repo: context.repo.repo,
               release_id: ${{ inputs.release_id }},
               name: '${{ matrix.artifact_name }}',
-              data: fs.readFileSync('${{ matrix.artifact_name }}')
+              data: fs.readFileSync('MySpeed-CN')
             });
 
       - name: Upload archive to Release
