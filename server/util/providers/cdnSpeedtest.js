@@ -17,6 +17,30 @@ const STREAMS          = 6;       // 并发流数
 const PING_COUNT       = 10;      // ping 次数
 
 /**
+ * 上传端点适配 — 按主机自动匹配请求方式（CDN 上传池 CDN_UPLOAD_URLS 的备注在此落实）
+ *   - speed.cloudflare.com/__up : 需带 UA/Origin，URL 不带额外参数
+ *   - netsp.master.qq.com       : QQ管家协议 multipart/form-data，且仅单流
+ *   - 其余（mbd.baidu.com / vcs.zijieapi.com 等）: 多流 octet-stream 直传
+ */
+function uploadProfile(uploadUrl) {
+    let host = '';
+    try { host = new URL(uploadUrl).hostname; } catch { return {}; }
+
+    if (host === 'speed.cloudflare.com') {
+        return {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Origin': 'https://speed.cloudflare.com',
+            },
+        };
+    }
+    if (host === 'netsp.master.qq.com') {
+        return { multipart: true, singleStream: true };
+    }
+    return {};
+}
+
+/**
  * 通过 HTTP HEAD 测量延迟 (类似 ICMP ping)
  */
 async function measurePing(url, count = PING_COUNT) {
@@ -157,25 +181,39 @@ async function measureDownload(downloadUrl, streams = STREAMS, durationMs = TEST
 /**
  * 测量上传速度
  */
-function startUploadStream(url, stats, stopped) {
+function startUploadStream(url, stats, stopped, profile = {}) {
     return new Promise((resolve) => {
         const chunkSize = 128 * 1024;
         const chunk = Buffer.alloc(chunkSize);
         for (let i = 0; i < chunkSize; i++) chunk[i] = Math.floor(Math.random() * 256);
+        const boundary = '----MySpeed' + Math.random().toString(16).slice(2);
 
         const doUpload = () => {
             if (stopped.value) return resolve();
 
-            const blob = Buffer.concat(Array(16).fill(chunk));
+            let blob = Buffer.concat(Array(16).fill(chunk));
+            const headers = { ...(profile.headers || {}) };
+            if (profile.multipart) {
+                // QQ管家协议：multipart/form-data（实测仅单流可用，由调用方置 streams=1）
+                const head = Buffer.from(
+                    `--${boundary}\r\n` +
+                    'Content-Disposition: form-data; name="data"; filename="speed.bin"\r\n' +
+                    'Content-Type: application/octet-stream\r\n\r\n'
+                );
+                const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+                blob = Buffer.concat([head, blob, tail]);
+                headers['Content-Type'] = `multipart/form-data; boundary=${boundary}`;
+            } else {
+                headers['Content-Type'] = 'application/octet-stream';
+            }
+            headers['Content-Length'] = blob.length;
+
             const parsed = new URL(url);
             const mod = parsed.protocol === 'https:' ? https : http;
 
             const req = mod.request(parsed, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                    'Content-Length': blob.length,
-                },
+                headers: headers,
                 timeout: 15000,
             }, (res) => {
                 res.resume();
@@ -202,7 +240,7 @@ function startUploadStream(url, stats, stopped) {
     });
 }
 
-async function measureUpload(uploadUrl, streams = STREAMS, durationMs = TEST_DURATION_MS) {
+async function measureUpload(uploadUrl, streams = STREAMS, durationMs = TEST_DURATION_MS, profile = {}) {
     const stats = { totalBytes: 0 };
     const stopped = { value: false };
 
@@ -210,7 +248,7 @@ async function measureUpload(uploadUrl, streams = STREAMS, durationMs = TEST_DUR
     for (let i = 0; i < streams; i++) {
         streamPromises.push(
             new Promise(resolve => setTimeout(() => {
-                startUploadStream(uploadUrl, stats, stopped).then(resolve);
+                startUploadStream(uploadUrl, stats, stopped, profile).then(resolve);
             }, i * 100))
         );
     }
@@ -276,6 +314,8 @@ export async function runCdnSpeedtest(serverConfig) {
 
     // 确定上传URL：优先从 uploadUrls 数组随机选取，否则用 uploadUrl
     const resolvedUlUrl = pickRandom(uploadUrls) || uploadUrl;
+    // 上传端点请求方式/流数适配（CF 带 UA/Origin；QQ multipart 仅单流）
+    const ulProfile = resolvedUlUrl ? uploadProfile(resolvedUlUrl) : null;
 
     // 1. Ping
     const pingTarget = pingUrl || resolvedDlUrl;
@@ -287,7 +327,8 @@ export async function runCdnSpeedtest(serverConfig) {
     // 3. Upload (如果配置了上传 URL)
     let ulResult = { upload: 0, uploadBytes: 0 };
     if (resolvedUlUrl) {
-        ulResult = await measureUpload(resolvedUlUrl, numStreams, uploadTime * 1000);
+        const ulStreams = ulProfile && ulProfile.singleStream ? 1 : numStreams;
+        ulResult = await measureUpload(resolvedUlUrl, ulStreams, uploadTime * 1000, ulProfile);
     }
 
     const elapsed = Date.now() - startTime;

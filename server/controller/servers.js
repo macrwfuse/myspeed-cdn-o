@@ -172,12 +172,27 @@ export const LIBRE_CN_SERVERS = {
 
 // ── 🌐 CDN 下载测速节点 ──
 // 来源: NetworkPanel / speed.do
+
+// ── CDN 上传测速端点池（实测：mbd.baidu 41.7 / vcs.zijie 55.7 / Cloudflare 28.2 / QQ netspeed 62.7 Mbps）──
+// 仅用于 CDN 测速节点（cdn-* / speeddo-cf-us）；Ookla / LibreSpeed 节点不受影响。
+// 备注：
+//   mbd.baidu.com / vcs.zijieapi.com        多流 octet-stream 直传即可（speed.do/st 核心1/2）
+//   speed.cloudflare.com/__up               需带 UA/Origin 且 URL 不带额外参数
+//   netsp.master.qq.com/cgi-bin/netspeed    QQ管家协议 multipart、仅单流
+// 请求方式的自动适配在 server/util/providers/cdnSpeedtest.js（按主机匹配）。
+export const CDN_UPLOAD_URLS = [
+    "https://mbd.baidu.com/ztbox?action=zpblog&nocache=1",
+    "https://vcs.zijieapi.com/vc/setting?aid=6383&pageId=6241&nocache=1",
+    "https://speed.cloudflare.com/__up",
+    "http://netsp.master.qq.com/cgi-bin/netspeed"
+];
+
 export const CDN_SERVERS = {
     "cdn-cloudflare-25m": {
         id: "cdn-cloudflare-25m",
         name: "Cloudflare · 25MB",
         downloadUrl: "https://speed.cloudflare.com/__down?bytes=25000000",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://speed.cloudflare.com/__down?bytes=0",
         streams: 6,
         downloadTime: 10,
@@ -187,7 +202,7 @@ export const CDN_SERVERS = {
         id: "cdn-cloudflare-100m",
         name: "Cloudflare · 100MB",
         downloadUrl: "https://speed.cloudflare.com/__down?bytes=100000000",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://speed.cloudflare.com/__down?bytes=0",
         streams: 6,
         downloadTime: 10,
@@ -197,7 +212,7 @@ export const CDN_SERVERS = {
         id: "cdn-cachefly",
         name: "CacheFly 全球 CDN",
         downloadUrl: "https://web1.cachefly.net/speedtest/downloading",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://web1.cachefly.net/speedtest/downloading",
         streams: 6,
         downloadTime: 10,
@@ -207,7 +222,7 @@ export const CDN_SERVERS = {
         id: "cdn-steam-akamai",
         name: "Steam Akamai CDN",
         downloadUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1063730/extras/NW_Sword_Sorcery_2.gif",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://cdn.akamai.steamstatic.com/",
         streams: 4,
         downloadTime: 10,
@@ -217,7 +232,7 @@ export const CDN_SERVERS = {
         id: "cdn-byte",
         name: "字节 CDN",
         downloadUrl: "https://lf3-cdn-tos.bytegoofy.com/obj/douyin-pc-client/7044145585217083655/releases/8293088/1.0.8/win32-ia32/douyin-v1.0.8-win32-ia32-douyin.exe",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://lf3-cdn-tos.bytecdntp.com/",
         streams: 6,
         downloadTime: 10,
@@ -227,7 +242,7 @@ export const CDN_SERVERS = {
         id: "cdn-qiniu",
         name: "七牛 CDN",
         downloadUrl: "https://devtools.qiniu.com/linux/amd64/qrsctl",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://devtools.qiniu.com/",
         streams: 4,
         downloadTime: 10,
@@ -237,7 +252,7 @@ export const CDN_SERVERS = {
         id: "cdn-aliyun",
         name: "阿里 CDN",
         downloadUrl: "https://gw.alipayobjects.com/os/volans-demo/93211a67-0eed-40ff-8a48-f6c137a88781/MiniProgramStudio-3.1.3.exe",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://gw.alipayobjects.com/",
         streams: 4,
         downloadTime: 10,
@@ -247,7 +262,7 @@ export const CDN_SERVERS = {
         id: "cdn-baidu",
         name: "百度网盘 CDN",
         downloadUrl: "https://issuepcdn.baidupcs.com/issue/netdisk/LinuxGuanjia/4.17.7/baidunetdisk_4.17.7_amd64.deb",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://issuepcdn.baidupcs.com/",
         streams: 4,
         downloadTime: 10,
@@ -257,7 +272,7 @@ export const CDN_SERVERS = {
         id: "cdn-wangyi",
         name: "网易 CDN",
         downloadUrl: "https://open-image.ws.126.net/android_phone_release-sp_open-v9.9.9-v0a5b3c1dc0df472bb2fb057d0a5426c3.apk",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://open-image.ws.126.net/",
         streams: 4,
         downloadTime: 10,
@@ -267,7 +282,7 @@ export const CDN_SERVERS = {
         id: "cdn-microsoft",
         name: "Microsoft Akamai CDN",
         downloadUrl: "https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RW16Ptm",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://img-prod-cms-rt-microsoft-com.akamaized.net/",
         streams: 4,
         downloadTime: 10,
@@ -299,7 +314,7 @@ export const CDN_SERVERS = {
         id: "speeddo-cf-us",
         name: "【CloudFlare】美国节点",
         downloadUrl: "https://speed.cloudflare.com/__down?bytes=25000000",
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "https://speed.cloudflare.com/__down?bytes=0",
         streams: 6,
         downloadTime: 10,
@@ -359,7 +374,7 @@ export const CDN_SERVERS = {
         downloadUrls: [
             "https://img.mcloud.139.com/material_prod/material_media/20221128/1669626861087.png"
         ],
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
         streams: 6,
         downloadTime: 10,
@@ -373,7 +388,7 @@ export const CDN_SERVERS = {
         downloadUrls: [
             "https://desk.ctyun.cn:8999/desktop-prod/software/windows_tob_client/15/64/202030001/CtyunClouddeskUniversal_2.3.0_202030001_x86_20240327104015_Setup.exe"
         ],
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
         streams: 6,
         downloadTime: 10,
@@ -409,12 +424,7 @@ export const CDN_SERVERS = {
             "https://video19.ifeng.com/video09/2022/07/06/p6950362006465552946-102-162611.mp4",
             "https://download.jr.jd.com/downapp/jrapp_jr9631.apk"
         ],
-        uploadUrls: [
-            "https://test.nju.edu.cn/backend/empty.php?cors=1",
-            "https://219.140.61.101/backend/empty.php?cors=1",
-            "https://119.36.86.250:81/backend/empty.php?cors=1",
-            "http://211.67.53.2/backend/empty.php?cors=1"
-        ],
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
         streams: 6,
         downloadTime: 10,
@@ -436,7 +446,7 @@ export const CDN_SERVERS = {
             "http://bigsoftdlc.360tpcdn.com/auto/20210401/103779382_99dafefbd4193095a95fa713348fe6e7.exe",
             "http://bigsoftdlc.360tpcdn.com/auto/20201125/105005364_74cbde2c220e12dbd49b2c86e0ab2c6f.exe"
         ],
-        uploadUrl: "https://speed.cloudflare.com/__up",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
         streams: 6,
         downloadTime: 10,
@@ -450,7 +460,7 @@ export const CDN_SERVERS = {
         downloadUrls: [
             "http://webcdn.m.qq.com/speed/SpeedTestData.dat"
         ],
-        uploadUrl: "http://netsp.master.qq.com/cgi-bin/netspeed",
+        uploadUrls: CDN_UPLOAD_URLS,
         pingUrl: "http://webcdn.m.qq.com",
         streams: 6,
         downloadTime: 10,
